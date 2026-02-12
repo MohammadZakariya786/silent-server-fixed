@@ -3,7 +3,6 @@ const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
 const requestLogger = require("./middleware/logger");
 const authMiddleware = require("./middleware/auth");
-const { generateToken } = require("./utils/tokenGenerator");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,6 +13,7 @@ const otpStore = {};
 
 // Middleware
 app.use(requestLogger);
+app.use(cookieParser());
 app.use(express.json());
 
 
@@ -49,7 +49,7 @@ app.post("/auth/login", (req, res) => {
     // Store OTP
     otpStore[loginSessionId] = otp;
 
-    console.log(`[OTP] Session ${loginSessionId} generated`);
+    console.log(`[OTP] Session ${loginSessionId} generated: ${otp}`);
 
     return res.status(200).json({
       message: "OTP sent",
@@ -109,15 +109,18 @@ app.post("/auth/verify-otp", (req, res) => {
 
 app.post("/auth/token", (req, res) => {
   try {
-    const token = req.headers.authorization;
+    const headerAuthorization = req.headers.authorization;
+    const sessionIdFromCookie = req.cookies?.session_token;
+    const sessionIdFromHeader = headerAuthorization?.replace("Bearer ", "");
+    const sessionId = sessionIdFromCookie || sessionIdFromHeader;
 
-    if (!token) {
+    if (!sessionId) {
       return res
         .status(401)
         .json({ error: "Unauthorized - valid session required" });
     }
 
-    const session = loginSessions[token.replace("Bearer ", "")];
+    const session = loginSessions[sessionId];
 
     if (!session) {
       return res.status(401).json({ error: "Invalid session" });
@@ -129,7 +132,7 @@ app.post("/auth/token", (req, res) => {
     const accessToken = jwt.sign(
       {
         email: session.email,
-        sessionId: token,
+        sessionId,
       },
       secret,
       {

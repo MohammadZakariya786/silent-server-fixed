@@ -1,111 +1,148 @@
-# The Silent Server (Backend Debugging Assignment)
+# The Silent Server – Backend Debugging Assignment (Fixed Version)
 
-This API is intentionally broken. Your task is to debug it and complete the authentication flow.
+This repository contains the fixed and fully functional version of **The Silent Server** authentication API.
 
-## Setup
+The original project was intentionally broken. All authentication bugs have been identified and resolved.
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+## Fix Summary
 
-2. Start the server:
-   ```bash
-   npm start
-   ```
-   Server runs at: `http://localhost:3000`
+The following issues were debugged and resolved:
 
-## Assignment Objective
+- Fixed request middleware flow (missing `next()` calls)
+- Corrected OTP verification flow and session handling
+- Fixed session cookie creation and reading
+- Corrected JWT generation in `POST /auth/token`
+- Fixed protected route middleware validation
 
-The goal is to fix the broken authentication endpoints so that a user can:
-1.  **Login** to get a session ID and OTP.
-2.  **Verify the OTP** to get a valid session cookie.
-3.  **Exchange the Session** for a JWT Access Token.
-4.  **Access Protected Routes** using the token.
+The authentication flow now works end-to-end.
 
-You will need to use your browser's developer tools, network inspection, and server logs to debug.
+## Setup Instructions
 
----
+### 1) Install dependencies
 
-## Tasks & Verification
+```bash
+npm install
+```
 
-### Task 1: Fix Login
+### 2) Start the server
+
+```bash
+npm start
+```
+
+Server runs at: `http://localhost:3000`
+
+## Testing Notes
+
+- The commands below are written for `curl` (Linux/macOS/Git Bash).
+- If you use Windows PowerShell, `curl` can be an alias for `Invoke-WebRequest`. Use `curl.exe` or run the commands from Git Bash.
+- Testing for this submission was performed using Git Bash on Windows.
+
+## Complete Authentication Flow
+
+### Task 1: Login
+
 **Endpoint:** `POST /auth/login`
-The server should generate a session and log an OTP to the console.
 
-**Test Command:**
+**Command (run in Git Bash):**
+
 ```bash
 curl -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"<YOUR_EMAIL@example.com>","password":"password123"}'
+  -d '{"email":"YOUR_EMAIL@example.com","password":"password123"}'
 ```
-**Expected Outcome:**
-- Server logs the OTP (e.g., `[OTP] Session abc12345 generated`).
-- Response contains `loginSessionId`.
 
-### Task 2: Fix OTP Verification
-**Endpoint:** `POST /auth/verify-otp`
-The server fails to verify the OTP correctly. You need to find out why.
-*Hint: Check data types and how cookies are set.*
+**Expected result:**
 
-**Test Command:**
-(Replace `<loginSessionId>` and `<otp>` with values from Task 1)
+- Server logs OTP in console (example): `[OTP] Session abc123 generated: 456789`
+- Response contains:
+
+```json
+{ "message": "OTP sent", "loginSessionId": "abc123" }
+```
+
+### Task 2: Verify OTP
+
+Use the OTP from the server logs.
+
 ```bash
 curl -c cookies.txt -X POST http://localhost:3000/auth/verify-otp \
   -H "Content-Type: application/json" \
-  -d '{"loginSessionId":"<loginSessionId>","otp":"<otp_from_logs>"}'
+  -d '{"loginSessionId":"abc123","otp":"456789"}'
 ```
-**Expected Outcome:**
-- `cookies.txt` is created containing a session cookie.
-- Response says "OTP verified".
 
-### Task 3: Fix Token Generation
-**Endpoint:** `POST /auth/token`
-This endpoint is supposed to issue a JWT, but it has a bug in how it reads the session.
+**Expected result:**
 
-**Test Command:**
+- `cookies.txt` file is created
+- Response:
+
+```json
+{ "message": "OTP verified" }
+```
+
+### Task 3: Generate JWT token
+
 ```bash
-# Uses the cookie captured in Task 2
 curl -b cookies.txt -X POST http://localhost:3000/auth/token
 ```
-**Expected Outcome:**
-- Response contains `{ "access_token": "..." }`.
 
-### Task 4: Fix Protected Route Access
-**Endpoint:** `GET /protected`
-Ensure the middleware correctly validates the token.
+**Expected result:**
 
-**Test Command:**
-```bash
-# Replace <jwt> with the token from Task 3
-curl -H "Authorization: Bearer <jwt>" http://localhost:3000/protected
+```json
+{ "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", "expires_in": 900 }
 ```
-**Expected Outcome:**
-- Response: `{ "message": "Access granted", "user": ... }`
 
----
+### Task 4: Access protected route
 
+Replace `<jwt>` with the token from Task 3.
 
-## Expected Output
+```bash
+curl -H "Authorization: Bearer <jwt>" \
+  http://localhost:3000/protected
+```
 
-After fixing the bugs, you should be able to run the following sequence successfully:
+**Expected result:**
 
-1.  **Login**: Receive a `loginSessionId` and see an OTP in the server logs.
-2.  **Verify OTP**: Receive a session cookie (`session_token`).
-3.  **Get Token**: Exchange the session cookie for a JWT (`access_token`).
-4.  **Access Protected Route**: Use the JWT to get a 200 OK response with user details and a **unique Success Flag**.
+```json
+{ "message": "Access granted", "user": "...", "success_flag": "unique_flag_value" }
+```
 
-**Important**: You must use **your own email address** when testing the login flow. The success flag is generated based on the email you use.
+## Output Artifact
 
+The `output.txt` file in this repository contains:
 
+- Terminal output of all 4 curl commands
+- Final response including the `success_flag`
 
+## Project Structure
 
-## Submission
+```
+broken_auth_assignment/
+├── server.js
+├── package.json
+├── output.txt
+└── screenshot/
+    └── backend-curl.png
+```
 
-To submit your assignment:
+## Screenshot (Example Run)
 
-1.  Push your code to a **Public GitHub Repository**.
-2.  Add a file named `output.txt` in your repository.
-    *   This file must contain the terminal output of all 4 test commands (Login, Verify OTP, Get Token, Access Protected Route).
-    *   Ensure the final command's output showing the `success_flag` is clearly visible in this file.
-3.  Share the link to your repository.
+This screenshot shows the successful execution of:
+
+- Login
+- OTP verification
+- Token generation
+- Protected route access
+
+![Backend curl run (Git Bash)](screenshot/backend-curl.png)
+
+## Submission Details
+
+- Code pushed to a public GitHub repository
+- `output.txt` includes all required curl outputs
+- Screenshot included inside `screenshot/`
+- Final protected route response shows `success_flag` clearly
+
+## Author
+
+Mohammad Zakariya
